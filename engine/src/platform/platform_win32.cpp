@@ -1,4 +1,5 @@
 #include "platform.h"
+#include "core/input.h"
 
 #if DPLATFORM_WINDOWS
     #include <windows.h>
@@ -75,7 +76,7 @@
             state->hwnd = handle;
         }
 
-        b32 shouldActivate = 1; //TODO: if window should nto accept input, this should be false
+        b32 shouldActivate = 1; //TODO: if window should not accept input, this should be false
         i32 showWindowCommandFlags = shouldActivate ? SW_SHOW : SW_SHOWNOACTIVATE;
         //If start minimized, use SW_MINIMIZE : SW_SHOWMINNOACTIVATE
         //If start maximized, use SW_SHOWMAXIMIZED : SW_MAXIMIZE
@@ -134,8 +135,8 @@
 
         OutputDebugStringA(message);
         u64 length = strlen(message);
-        LPDWORD numberWritten = 0;
-        WriteConsoleA(GetStdHandle(STD_OUTPUT_HANDLE), message, (DWORD)length, numberWritten, 0);
+        LPDWORD bytesWritten = 0;
+        WriteConsoleA(GetStdHandle(STD_OUTPUT_HANDLE), message, (DWORD)length, bytesWritten, 0);
     }
 
     void PlatformConsoleWriteError(char* message, u8 color){
@@ -184,21 +185,22 @@
             case WM_KEYUP:
             case WM_SYSKEYUP:{
                 //key pressed/released
-                //b8 pressed = (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN);
-                //TODO: input processing
+                b8 pressed = (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN);
+                Keys key = (Keys)(u16)wParam;
+                InputProcessKey(key, pressed);
             } break;
             case WM_MOUSEMOVE:{
-                //i32 xPos = GET_X_LPARAM(lParam);
-                //i32 yPos = GET_Y_LPARAM(lParam);
-                //TODO: input processing
+                i32 xPos = GET_X_LPARAM(lParam);
+                i32 yPos = GET_Y_LPARAM(lParam);
+                InputProcessMouseMove(xPos, yPos);
             } break;
             case WM_MOUSEWHEEL: {
-                //i32 zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
-                //if(zDelta != 0){
-                //    //flatten to OS independent range
-                //    zDelta = (zDelta < 0) ? -1 : 1;
-                //    //TODO: input proccessing
-                //}
+                i32 zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
+                if(zDelta != 0){
+                    //flatten to OS independent range
+                    zDelta = (zDelta < 0) ? -1 : 1;
+                    InputProcessMouseWheel(zDelta);
+                }
             } break;
             case WM_LBUTTONDOWN:
             case WM_MBUTTONDOWN:
@@ -206,8 +208,25 @@
             case WM_LBUTTONUP:
             case WM_MBUTTONUP:
             case WM_RBUTTONUP:{
-                //b8 pressed = msg == WM_LBUTTONDOWN || msg == WM_RBUTTONDOWN || msg == WM_MBUTTONDOWN;
-                //TODO: input processing
+                b8 pressed = msg == WM_LBUTTONDOWN || msg == WM_RBUTTONDOWN || msg == WM_MBUTTONDOWN;
+                Buttons mouseButton = BUTTON_MAX_BUTTONS;
+                switch(msg){
+                    case WM_LBUTTONDOWN:
+                    case WM_LBUTTONUP:
+                        mouseButton = BUTTON_LEFT;
+                        break;
+                    case WM_MBUTTONDOWN:
+                    case WM_MBUTTONUP:
+                        mouseButton = BUTTON_MIDDLE;
+                        break;
+                    case WM_RBUTTONDOWN:
+                    case WM_RBUTTONUP:
+                        mouseButton = BUTTON_RIGHT;
+                        break;
+                }
+                if(mouseButton != BUTTON_MAX_BUTTONS){
+                    InputProcessButton(mouseButton, pressed);
+                }
             } break;
         }
         return DefWindowProcA(hwnd, msg, wParam, lParam);

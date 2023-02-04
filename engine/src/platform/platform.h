@@ -6,11 +6,11 @@ struct PlatformState{
     void* internalState;
 };
 
-DAPI b8 PlatformStartup(PlatformState* platState, char* appName, i32 x, i32 y, i32 width, i32 height);
+b8 PlatformStartup(PlatformState* platState, char* appName, i32 x, i32 y, i32 width, i32 height);
 
-DAPI void PlatformShutdown(PlatformState* platState);
+void PlatformShutdown(PlatformState* platState);
 
-DAPI b8 PlatformPumpMessages(PlatformState* platState);
+b8 PlatformPumpMessages(PlatformState* platState);
 
 void* PlatformAllocate(u64 size, b8 aligned);
 void PlatformFree(void* block, b8 aligned);
