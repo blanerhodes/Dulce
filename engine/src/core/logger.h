@@ -23,8 +23,10 @@ enum LogLevel {
     LOG_LEVEL_TRACE = 5
 };
 
-b8 InitializeLogging();
-void ShutdownLogging();
+//Call twice: first with state = 0 to get required mem size and second passing alloced mem to state
+b8 InitializeLogging(u64* memoryRequirement, void* state);
+
+void ShutdownLogging(void* state);
 
 DAPI void LogOutput(LogLevel level, char* message, ...);
 

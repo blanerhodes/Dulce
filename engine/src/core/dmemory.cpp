@@ -12,6 +12,7 @@ struct MemoryStats{
 static char* memoryTagStrings[MEMORY_TAG_MAX_TAGS] = {
     "UNKNOWN    ",
     "ARRAY      ",
+    "LINEAR_ALLC",
     "DARRAY     ",
     "DICT       ",
     "RING_QUEUE ",
@@ -29,24 +30,40 @@ static char* memoryTagStrings[MEMORY_TAG_MAX_TAGS] = {
     "SCENE      "
 };
 
-static MemoryStats stats;
+struct MemorySystemState{
+    MemoryStats stats;
+    u64 allocCount;
+};
 
-void InitializeMemory(){
-    PlatformZeroMemory(&stats, sizeof(stats));
+static MemorySystemState* statePtr;
+
+void InitializeMemory(u64* memorySysRequirements, void* state){
+    *memorySysRequirements = sizeof(MemorySystemState);
+    if(state == 0){
+        return;
+    }
+    statePtr = (MemorySystemState*)state;
+    statePtr->allocCount = 0;
+
+    PlatformZeroMemory(&statePtr->stats, sizeof(statePtr->stats));
 }
 
-void ShutdownMemory(){
+void ShutdownMemory(void* state){
+    statePtr = 0;
 }
 
 void* DAllocate(u64 size, MemoryTag tag){
     if(tag == MEMORY_TAG_UNKNOWN){
         DWARN("DAllocate called using MEMORY_TAG_UNKNOWN. Re-class this allocation.");
     }
-    stats.totalAllocated += size;
-    stats.taggedAllocations[tag] += size;
+    if(statePtr){
+        statePtr->stats.totalAllocated += size;
+        statePtr->stats.taggedAllocations[tag] += size;
+        statePtr->allocCount++;
+    }
 
     //TODO: memory alignment
-    void* block = PlatformAllocate(size, FALSE);
+    void* block = PlatformAllocate(size, false);
     PlatformZeroMemory(block, size);
     return block;
 }
@@ -55,11 +72,11 @@ void DFree(void* block, u64 size, MemoryTag tag){
     if(tag == MEMORY_TAG_UNKNOWN){
         DWARN("DAllocate called using MEMORY_TAG_UNKNOWN. Re-class this deallocation.");
     }
-    stats.totalAllocated -= size;
-    stats.taggedAllocations[tag] -= size;
+    statePtr->stats.totalAllocated -= size;
+    statePtr->stats.taggedAllocations[tag] -= size;
     
     //TODO: memory alignment
-    PlatformFree(block, FALSE);
+    PlatformFree(block, false);
 }
 
 void* DZeroMemory(void* block, u64 size){
@@ -85,19 +102,19 @@ char* GetMemoryUsageStr(){
         char unit[] = "XiB";
         float amount = 1.0f;
 
-        if(stats.taggedAllocations[i] >= gib){
+        if(statePtr->stats.taggedAllocations[i] >= gib){
             unit[0] = 'G';
-            amount = stats.taggedAllocations[i] / (float)gib;
-        } else if(stats.taggedAllocations[i] >= mib){
+            amount = statePtr->stats.taggedAllocations[i] / (float)gib;
+        } else if(statePtr->stats.taggedAllocations[i] >= mib){
             unit[0] = 'M';
-            amount = stats.taggedAllocations[i] / (float)mib;
-        } else if(stats.taggedAllocations[i] >= kib){
+            amount = statePtr->stats.taggedAllocations[i] / (float)mib;
+        } else if(statePtr->stats.taggedAllocations[i] >= kib){
             unit[0] = 'K';
-            amount = stats.taggedAllocations[i] / (float)kib;
+            amount = statePtr->stats.taggedAllocations[i] / (float)kib;
         } else{
             unit[0] = 'B';
             unit[1] = 0;
-            amount = (float)stats.taggedAllocations[i];
+            amount = (float)statePtr->stats.taggedAllocations[i];
         } 
 
         i32 length = snprintf(buffer + offset, 8000, " %s: %.2f%s\n", memoryTagStrings[i], amount, unit);
@@ -105,4 +122,11 @@ char* GetMemoryUsageStr(){
     }
     char* outString = _strdup(buffer);
     return outString;
+}
+
+u64 GetMemoryAllocCount(){
+    if(statePtr){
+        return statePtr->allocCount;
+    }
+    return 0;
 }

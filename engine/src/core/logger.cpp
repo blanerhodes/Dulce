@@ -5,17 +5,34 @@
 #include <string.h>
 #include <stdarg.h>
 
+struct LoggerSystemState{
+    b8 initialized;
+};
 
-void ReportAssertionFailure(char* expression, char* message, char* file, i32 line){
-    LogOutput(LOG_LEVEL_FATAL, "Assertion Failure: %s, message: '$s', in file: %s, line: %d\n", expression, message, file, line);
-}
+static LoggerSystemState* statePtr;
 
-b8 InitializeLogging(){
+b8 InitializeLogging(u64* memoryRequirement, void* state){
+    *memoryRequirement = sizeof(LoggerSystemState);
+    if(state == 0){
+        return true;
+    }
+
+    statePtr = (LoggerSystemState*)state;
+    statePtr->initialized = true;
+
+    DFATAL("A test message: %f", 3.14f);
+    DERROR("A test message: %f", 3.14f);
+    DWARN("A test message: %f", 3.14f);
+    DINFO("A test message: %f", 3.14f);
+    DDEBUG("A test message: %f", 3.14f);
+    DTRACE("A test message: %f", 3.14f);
+
     //TODO: create log file
-    return TRUE;
+    return true;
 }
 
-void ShutdownLogging(){
+void ShutdownLogging(void* state){
+    statePtr = 0;
     //TODO: cleanup logging/write queued entries
 }
 
@@ -42,4 +59,8 @@ void LogOutput(LogLevel level, char* message, ...){
     } else{
         PlatformConsoleWrite(outMessage2, level);
     }
+}
+
+void ReportAssertionFailure(char* expression, char* message, char* file, i32 line){
+    LogOutput(LOG_LEVEL_FATAL, "Assertion Failure: %s, message: '$s', in file: %s, line: %d\n", expression, message, file, line);
 }

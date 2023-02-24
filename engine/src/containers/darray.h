@@ -32,7 +32,7 @@ DAPI void* _DarrayInsertAt(void* array, u64 index, void* valuePtr);
 
 #define DarrayCreate(type) _DarrayCreate(DARRAY_DEFAULT_CAPACITY, sizeof(type))
 
-#define DarrayReserve(type) _DarrayCreate(capacity, sizeof(type))
+#define DarrayReserve(type, capacity) _DarrayCreate(capacity, sizeof(type))
 
 #define DarrayDestroy(array) _DarrayDestroy(array);
 

@@ -14,3 +14,4 @@ struct ApplicationConfig{
 
 DAPI b8 ApplicationCreate(Game* gameInst);
 DAPI b8 ApplicationRun();
+void ApplicationGetFrameBufferSize(u32* width, u32* height);

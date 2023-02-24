@@ -9,4 +9,5 @@ struct Game{
     b8 (*Render)(Game* gameInst, f32 deltaTime);
     void (*OnResize)(Game* gameInst, u32 width, u32 height);
     void* state;
+    void* applicationState;
 };

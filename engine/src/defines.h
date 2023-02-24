@@ -22,8 +22,8 @@ typedef double f64;
 typedef int32_t b32;
 typedef uint8_t b8;
 
-#define TRUE 1
-#define FALSE 0
+#define true 1
+#define false 0
 
 #define ArrayCount(array) (sizeof(array) / sizeof((array)[0]))
 #define Minimum(A, B) ((A < B) ? (A) : (B))
@@ -54,4 +54,14 @@ typedef uint8_t b8;
     #else
         #define DAPI
     #endif
+#endif
+
+#define DCLAMP(value,min, max) (value <= min) ? min : (value >= max) ? max : value;
+
+#ifdef _MSC_VER
+    #define DINLINE __forceinline
+    #define DNOINLINE __declspec(noinline)
+#else
+    #define DINLINE static inline
+    #define DNOINLINE
 #endif

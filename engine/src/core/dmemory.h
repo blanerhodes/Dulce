@@ -5,6 +5,7 @@
 enum MemoryTag{
     MEMORY_TAG_UNKNOWN,
     MEMORY_TAG_ARRAY,
+    MEMORY_TAG_LINEAR_ALLOCATOR,
     MEMORY_TAG_DARRAY,
     MEMORY_TAG_DICT,
     MEMORY_TAG_RING_QUEUE,
@@ -23,8 +24,8 @@ enum MemoryTag{
     MEMORY_TAG_MAX_TAGS
 };
 
-DAPI void InitializeMemory();
-DAPI void ShutdownMemory();
+DAPI void InitializeMemory(u64* memorySysRequirements, void* state);
+DAPI void ShutdownMemory(void* state);
 
 DAPI void* DAllocate(u64 size, MemoryTag tag);
 DAPI void DFree(void* block, u64, MemoryTag tag);
@@ -32,3 +33,4 @@ DAPI void* DZeroMemory(void* block, u64 size);
 DAPI void* DCopyMemory(void* dest, void* source, u64 size);
 DAPI void* DSetMemory(void* dest, i32 value, u64 size);
 DAPI char* GetMemoryUsageStr();
+DAPI u64 GetMemoryAllocCount();

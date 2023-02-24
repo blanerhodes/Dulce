@@ -7,9 +7,6 @@ SET cFilenames=
 FOR /R %%f in (*.cpp) do (
     SET cFilenames=!cFilenames! %%f
 )
-FOR /R %%f in (*.c) do (
-    SET cFilenames=!cFilenames! %%f
-)
 
 REM echo "Files:" %cFilenames%
 SET assembly=engine

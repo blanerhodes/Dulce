@@ -17,16 +17,16 @@ struct EventSystemState {
     EventCodeEntry registered[MAX_MESSAGE_CODES];
 };
 
-static b8 isInitialized = FALSE;
+static b8 isInitialized = false;
 static EventSystemState state = {};
 
 b8 EventInitialize(){
     if(isInitialized){
-        return FALSE;
+        return false;
     }
     DZeroMemory(&state, sizeof(state));
-    isInitialized = TRUE;
-    return TRUE;
+    isInitialized = true;
+    return true;
 }
 
 void EventShutdown(){
@@ -40,7 +40,7 @@ void EventShutdown(){
 
 b8 EventRegister(u16 code, void* listener, PfnOnEvent onEvent){
     if(!isInitialized){
-        return FALSE;
+        return false;
     }
 
     //RegisteredEvent* events = state.registered[code].events;
@@ -53,7 +53,7 @@ b8 EventRegister(u16 code, void* listener, PfnOnEvent onEvent){
     for(u64 i = 0; i < registeredcount; i++){
         if(state.registered[code].events[i].listener == listener){
             //TODO: warn
-            return FALSE;
+            return false;
         }
     }
 
@@ -61,16 +61,16 @@ b8 EventRegister(u16 code, void* listener, PfnOnEvent onEvent){
     event.listener = listener;
     event.callback = onEvent;
     DarrayPush(state.registered[code].events, event);
-    return TRUE;
+    return true;
 }
 
 b8 EventUnregister(u16 code, void* listener, PfnOnEvent onEvent){
     if(!isInitialized){
-        return FALSE;
+        return false;
     }
 
     if(!state.registered[code].events){
-        return FALSE;
+        return false;
     }
 
     u64 registeredCount = DarrayLength(state.registered[code].events);
@@ -80,19 +80,19 @@ b8 EventUnregister(u16 code, void* listener, PfnOnEvent onEvent){
         if(e.listener == listener && e.callback == onEvent){
             RegisteredEvent poppedEvent = {};
             DarrayPopAt(state.registered[code].events, i, &poppedEvent);
-            return TRUE;
+            return true;
         }
     }
-    return FALSE;
+    return false;
 }
 
 b8 EventFire(u16 code, void* sender, EventContext context){
     if(!isInitialized){
-        return FALSE;
+        return false;
     }
 
     if(!state.registered[code].events){
-        return FALSE;
+        return false;
     }
 
     u64 registeredCount = DarrayLength(state.registered[code].events);
@@ -101,8 +101,8 @@ b8 EventFire(u16 code, void* sender, EventContext context){
         //TODO: maybe make and equals function for events?
         if(e.callback(code, sender, e.listener, context)){
             //Message handled, dont send ot other listeners
-            return TRUE;
+            return true;
         }
     }
-    return FALSE;
+    return false;
 }

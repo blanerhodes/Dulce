@@ -13,5 +13,6 @@ b8 CreateGame(Game* outGame){
     outGame->Initialize = GameInitialize;
     outGame->OnResize = GameOnResize;
     outGame->state = DAllocate(sizeof(GameState), MEMORY_TAG_GAME);
-    return TRUE;
+    outGame->applicationState = 0;
+    return true;
 }

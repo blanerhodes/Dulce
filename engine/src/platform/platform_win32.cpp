@@ -1,15 +1,21 @@
-#include "platform.h"
-#include "core/input.h"
+#include "platform/platform.h"
 
 #if DPLATFORM_WINDOWS
+    #include <core/logger.h>
+    #include "core/input.h"
+    #include "core/event.h"
+    #include "containers/darray.h"
     #include <windows.h>
     #include <windowsx.h>
     #include <stdlib.h>
-    #include <core/logger.h>
+    #include <vulkan/vulkan.h>
+    #include <vulkan/vulkan_win32.h>
+    #include "renderer/vulkan/vulkan_types.inl"
 
     struct InternalState{
         HINSTANCE hInstance;
         HWND hwnd;
+        VkSurfaceKHR surface;
     };
 
     static f64 clockFrequency;
@@ -71,7 +77,7 @@
         if(!handle){
             MessageBoxA(NULL, "Window creation failed!", "Error!", MB_ICONEXCLAMATION | MB_OK);
             DFATAL("Window creation failed!");
-            return FALSE; 
+            return false; 
         } else{
             state->hwnd = handle;
         }
@@ -87,7 +93,7 @@
         clockFrequency = 1.0f / (f64)frequency.QuadPart;
         QueryPerformanceCounter(&startTime);
 
-        return TRUE;
+        return true;
     }
 
     void PlatformShutdown(PlatformState* platState){
@@ -104,7 +110,7 @@
             TranslateMessage(&message);
             DispatchMessageA(&message);
         }
-        return TRUE;
+        return true;
     }
 
     void* PlatformAllocate(u64 size, b8 aligned){
@@ -161,24 +167,48 @@
         Sleep(ms);
     }
 
+    void PlatformGetRequiredExtensionNames(char*** namesDarray){
+        DarrayPush(*namesDarray, (char*)"VK_KHR_win32_surface");
+    }
+
+    b8 PlatformCreateVulkanSurface(PlatformState* platState, VulkanContext* context){
+        InternalState* state = (InternalState*)platState->internalState;
+        VkWin32SurfaceCreateInfoKHR createInfo = {VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR};
+        createInfo.hinstance = state->hInstance;
+        createInfo.hwnd = state->hwnd;
+
+        VkResult result = vkCreateWin32SurfaceKHR(context->instance, &createInfo, context->allocator, &state->surface);
+        if(result != VK_SUCCESS){
+            DFATAL("Vulkan surface creation failed.");
+            return false;
+        }
+
+        context->surface = state->surface;
+        return true;
+    }
+
     LRESULT CALLBACK Win32ProcessMessage(HWND hwnd, u32 msg, WPARAM wParam, LPARAM lParam){
         switch(msg){
             case WM_ERASEBKGND:
                 //notify the OS that erasing will be handled by the app to prevent flicker (like when rendering with vulkan)
                 return 1;
-            case WM_CLOSE:
-                //TODO: fire event for the app to quit
-                return 0;
+            case WM_CLOSE:{
+                EventContext data = {};
+                EventFire(EVENT_CODE_APPLICATION_QUIT, 0, data);
+            } return 0;
             case WM_DESTROY: {
                 PostQuitMessage(0);
                 return 0;
             }
             case WM_SIZE: {
-                //RECT r = {};
-                //GetClientRect(hwnd, &r);
-                //u32 width = r.right - r.left;
-                //u32 height = r.bottom - r.top;
-                //TODO: fire event for window resize
+                RECT r = {};
+                GetClientRect(hwnd, &r);
+                u32 width = r.right - r.left;
+                u32 height = r.bottom - r.top;
+                EventContext context = {};
+                context.data.u16[0] = (u16)width;
+                context.data.u16[1] = (u16)height;
+                EventFire(EVENT_CODE_RESIZED, 0, context);
             } break;
             case WM_KEYDOWN:
             case WM_SYSKEYDOWN:
@@ -187,6 +217,26 @@
                 //key pressed/released
                 b8 pressed = (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN);
                 Keys key = (Keys)(u16)wParam;
+
+                if(wParam == VK_MENU){
+                    if(GetKeyState(VK_RMENU) & 0x8000){
+                        key = KEY_RALT;
+                    } else if(GetKeyState(VK_LMENU) & 0x8000){
+                        key = KEY_LALT;
+                    }
+                } else if(wParam == VK_SHIFT){
+                    if(GetKeyState(VK_RSHIFT) & 0x8000){
+                        key = KEY_RSHIFT;
+                    } else if(GetKeyState(VK_LSHIFT) & 0x8000){
+                        key = KEY_LSHIFT;
+                    }
+                } else if(wParam == VK_CONTROL){
+                    if(GetKeyState(VK_RCONTROL) & 0x8000){
+                        key = KEY_RCONTROL;
+                    } else if(GetKeyState(VK_LCONTROL) & 0x8000){
+                        key = KEY_LCONTROL;
+                    }
+                }
                 InputProcessKey(key, pressed);
             } break;
             case WM_MOUSEMOVE:{

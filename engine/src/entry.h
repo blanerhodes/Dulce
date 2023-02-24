@@ -3,13 +3,11 @@
 #include "core/application.h"
 #include "core/logger.h"
 #include "game_types.h"
-#include "core/dmemory.h"
 
 extern b8 CreateGame(Game* outGame);
 
 int main(void){
 
-    InitializeMemory();
 
     Game gameInst = {};
     if(!CreateGame(&gameInst)){
@@ -30,6 +28,5 @@ int main(void){
         return 2;
     }
 
-    ShutdownMemory();
     return 0;
 }
