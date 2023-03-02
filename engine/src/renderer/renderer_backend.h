@@ -4,5 +4,5 @@
 
 struct PlatformState;
 
-b8 RendererBackendCreate(RendererBackendType type, PlatformState* platState, RendererBackend* outRendererBackend);
+b8 RendererBackendCreate(RendererBackendType type,  RendererBackend* outRendererBackend);
 void RendererBackendDestroy(RendererBackend* rendererBackend);

@@ -72,9 +72,13 @@ union Quat{
     };
 };
 
-union Mat4{
+union Mat4 {
     alignas(16) f32 data[16];
 #if defined(DUSE_SIMD)
     alignas(16) Vec4 rows[4];
 #endif
+};
+
+struct Vertex3d {
+    Vec3 position;
 };

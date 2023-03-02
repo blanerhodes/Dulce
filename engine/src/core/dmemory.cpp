@@ -5,11 +5,11 @@
 #include <stdio.h>
 
 struct MemoryStats{
-    u64 totalAllocated;
-    u64 taggedAllocations[MEMORY_TAG_MAX_TAGS];
+    u64 total_allocated;
+    u64 tagged_allocations[MEMORY_TAG_MAX_TAGS];
 };
 
-static char* memoryTagStrings[MEMORY_TAG_MAX_TAGS] = {
+static char* memory_tag_strings[MEMORY_TAG_MAX_TAGS] = {
     "UNKNOWN    ",
     "ARRAY      ",
     "LINEAR_ALLC",
@@ -32,34 +32,34 @@ static char* memoryTagStrings[MEMORY_TAG_MAX_TAGS] = {
 
 struct MemorySystemState{
     MemoryStats stats;
-    u64 allocCount;
+    u64 alloc_count;
 };
 
-static MemorySystemState* statePtr;
+static MemorySystemState* memory_state_ptr;
 
-void InitializeMemory(u64* memorySysRequirements, void* state){
-    *memorySysRequirements = sizeof(MemorySystemState);
+void MemorySystemInitialize(u64* memory_sys_requirements, void* state){
+    *memory_sys_requirements = sizeof(MemorySystemState);
     if(state == 0){
         return;
     }
-    statePtr = (MemorySystemState*)state;
-    statePtr->allocCount = 0;
+    memory_state_ptr = (MemorySystemState*)state;
+    memory_state_ptr->alloc_count = 0;
 
-    PlatformZeroMemory(&statePtr->stats, sizeof(statePtr->stats));
+    PlatformZeroMemory(&memory_state_ptr->stats, sizeof(memory_state_ptr->stats));
 }
 
-void ShutdownMemory(void* state){
-    statePtr = 0;
+void MemorySystemShutdown(void* state){
+    memory_state_ptr = 0;
 }
 
 void* DAllocate(u64 size, MemoryTag tag){
     if(tag == MEMORY_TAG_UNKNOWN){
         DWARN("DAllocate called using MEMORY_TAG_UNKNOWN. Re-class this allocation.");
     }
-    if(statePtr){
-        statePtr->stats.totalAllocated += size;
-        statePtr->stats.taggedAllocations[tag] += size;
-        statePtr->allocCount++;
+    if(memory_state_ptr){
+        memory_state_ptr->stats.total_allocated += size;
+        memory_state_ptr->stats.tagged_allocations[tag] += size;
+        memory_state_ptr->alloc_count++;
     }
 
     //TODO: memory alignment
@@ -72,8 +72,10 @@ void DFree(void* block, u64 size, MemoryTag tag){
     if(tag == MEMORY_TAG_UNKNOWN){
         DWARN("DAllocate called using MEMORY_TAG_UNKNOWN. Re-class this deallocation.");
     }
-    statePtr->stats.totalAllocated -= size;
-    statePtr->stats.taggedAllocations[tag] -= size;
+    if(memory_state_ptr){
+        memory_state_ptr->stats.total_allocated -= size;
+        memory_state_ptr->stats.tagged_allocations[tag] -= size;
+    }
     
     //TODO: memory alignment
     PlatformFree(block, false);
@@ -102,22 +104,22 @@ char* GetMemoryUsageStr(){
         char unit[] = "XiB";
         float amount = 1.0f;
 
-        if(statePtr->stats.taggedAllocations[i] >= gib){
+        if(memory_state_ptr->stats.tagged_allocations[i] >= gib){
             unit[0] = 'G';
-            amount = statePtr->stats.taggedAllocations[i] / (float)gib;
-        } else if(statePtr->stats.taggedAllocations[i] >= mib){
+            amount = memory_state_ptr->stats.tagged_allocations[i] / (float)gib;
+        } else if(memory_state_ptr->stats.tagged_allocations[i] >= mib){
             unit[0] = 'M';
-            amount = statePtr->stats.taggedAllocations[i] / (float)mib;
-        } else if(statePtr->stats.taggedAllocations[i] >= kib){
+            amount = memory_state_ptr->stats.tagged_allocations[i] / (float)mib;
+        } else if(memory_state_ptr->stats.tagged_allocations[i] >= kib){
             unit[0] = 'K';
-            amount = statePtr->stats.taggedAllocations[i] / (float)kib;
+            amount = memory_state_ptr->stats.tagged_allocations[i] / (float)kib;
         } else{
             unit[0] = 'B';
             unit[1] = 0;
-            amount = (float)statePtr->stats.taggedAllocations[i];
+            amount = (float)memory_state_ptr->stats.tagged_allocations[i];
         } 
 
-        i32 length = snprintf(buffer + offset, 8000, " %s: %.2f%s\n", memoryTagStrings[i], amount, unit);
+        i32 length = snprintf(buffer + offset, 8000, " %s: %.2f%s\n", memory_tag_strings[i], amount, unit);
         offset += length;
     }
     char* outString = _strdup(buffer);
@@ -125,8 +127,8 @@ char* GetMemoryUsageStr(){
 }
 
 u64 GetMemoryAllocCount(){
-    if(statePtr){
-        return statePtr->allocCount;
+    if(memory_state_ptr){
+        return memory_state_ptr->alloc_count;
     }
     return 0;
 }

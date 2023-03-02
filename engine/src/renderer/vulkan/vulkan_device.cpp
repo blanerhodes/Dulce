@@ -42,8 +42,8 @@ b8 VulkanDeviceCreate(VulkanContext* context){
 
     DINFO("Creating logical device...");
     //NOTE: dont create additional queues for shared indices
-    b8 presentSharesGraphicsQueue = context->device.graphicsQueueIndex == context->device.presentQueueIndex;
-    b8 transferSharesGraphicsQueue = context->device.graphicsQueueIndex == context->device.transferQueueIndex;
+    b8 presentSharesGraphicsQueue = context->device.graphics_queue_index == context->device.present_queue_index;
+    b8 transferSharesGraphicsQueue = context->device.graphics_queue_index == context->device.transfer_queue_index;
     u32 indexCount = 1;
     if(!presentSharesGraphicsQueue){
         indexCount++;
@@ -53,12 +53,12 @@ b8 VulkanDeviceCreate(VulkanContext* context){
     }
     u32 indices[32];
     u8 index = 0;
-    indices[index++] = context->device.graphicsQueueIndex;
+    indices[index++] = context->device.graphics_queue_index;
     if(!presentSharesGraphicsQueue){
-        indices[index++] = context->device.presentQueueIndex;
+        indices[index++] = context->device.present_queue_index;
     }
     if(!transferSharesGraphicsQueue){
-        indices[index++] = context->device.transferQueueIndex;
+        indices[index++] = context->device.transfer_queue_index;
     }
     VkDeviceQueueCreateInfo queueCreateInfos[32];
     for(u32 i = 0; i < indexCount; i++){
@@ -89,40 +89,40 @@ b8 VulkanDeviceCreate(VulkanContext* context){
     deviceCreateInfo.ppEnabledExtensionNames = &extensionNames;
 
     VK_CHECK(vkCreateDevice(
-        context->device.physicalDevice,
+        context->device.physical_device,
         &deviceCreateInfo,
         context->allocator,
-        &context->device.logicalDevice));
+        &context->device.logical_device));
 
     DINFO("Logical device created.");
 
     //Get queues
     vkGetDeviceQueue(
-        context->device.logicalDevice,
-        context->device.graphicsQueueIndex,
+        context->device.logical_device,
+        context->device.graphics_queue_index,
         0,
-        &context->device.graphicsQueue);
+        &context->device.graphics_queue);
     vkGetDeviceQueue(
-        context->device.logicalDevice,
-        context->device.presentQueueIndex,
+        context->device.logical_device,
+        context->device.present_queue_index,
         0,
-        &context->device.presentQueue);
+        &context->device.present_queue);
     vkGetDeviceQueue(
-        context->device.logicalDevice,
-        context->device.transferQueueIndex,
+        context->device.logical_device,
+        context->device.transfer_queue_index,
         0,
-        &context->device.transferQueue);
+        &context->device.transfer_queue);
     DINFO("Queues obtained.");
 
     //Create command pool for graphis queue
     VkCommandPoolCreateInfo poolCreateInfo = {VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
-    poolCreateInfo.queueFamilyIndex = context->device.graphicsQueueIndex;
+    poolCreateInfo.queueFamilyIndex = context->device.graphics_queue_index;
     poolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     VK_CHECK(vkCreateCommandPool(
-        context->device.logicalDevice,
+        context->device.logical_device,
         &poolCreateInfo,
         context->allocator,
-        &context->device.graphicsCommandPool));
+        &context->device.graphics_command_pool));
     DINFO("Graphics command pool created.");
 
     return true;
@@ -130,42 +130,42 @@ b8 VulkanDeviceCreate(VulkanContext* context){
 
 void VulkanDeviceDestroy(VulkanContext* context){
     //unset queues
-    context->device.graphicsQueue = 0;
-    context->device.presentQueue = 0;
-    context->device.transferQueue = 0;
+    context->device.graphics_queue = 0;
+    context->device.present_queue = 0;
+    context->device.transfer_queue = 0;
 
     //Destroying command pools
     DINFO("Destroying command pools...");
-    vkDestroyCommandPool(context->device.logicalDevice, context->device.graphicsCommandPool, context->allocator);
+    vkDestroyCommandPool(context->device.logical_device, context->device.graphics_command_pool, context->allocator);
 
     DINFO("Destroying logical device...");
-    if(context->device.logicalDevice){
-        vkDestroyDevice(context->device.logicalDevice, context->allocator);
-        context->device.logicalDevice = 0;
+    if(context->device.logical_device){
+        vkDestroyDevice(context->device.logical_device, context->allocator);
+        context->device.logical_device = 0;
     }
 
     DINFO("Releasing physical device resources...");
-    context->device.physicalDevice = 0;
+    context->device.physical_device = 0;
 
-    if(context->device.swapchainSupport.formats){
-        DFree(context->device.swapchainSupport.formats,
-              sizeof(VkSurfaceFormatKHR) * context->device.swapchainSupport.formatCount,
+    if(context->device.swapchain_support.formats){
+        DFree(context->device.swapchain_support.formats,
+              sizeof(VkSurfaceFormatKHR) * context->device.swapchain_support.format_count,
               MEMORY_TAG_RENDERER);
-        context->device.swapchainSupport.formats = 0;
-        context->device.swapchainSupport.formatCount = 0;
+        context->device.swapchain_support.formats = 0;
+        context->device.swapchain_support.format_count = 0;
     }
 
-    if(context->device.swapchainSupport.presentModes){
-        DFree(context->device.swapchainSupport.presentModes,
-              sizeof(VkSurfaceFormatKHR) * context->device.swapchainSupport.presentModeCount,
+    if(context->device.swapchain_support.present_modes){
+        DFree(context->device.swapchain_support.present_modes,
+              sizeof(VkSurfaceFormatKHR) * context->device.swapchain_support.present_mode_count,
               MEMORY_TAG_RENDERER);
-        context->device.swapchainSupport.presentModes = 0;
-        context->device.swapchainSupport.presentModeCount = 0;
+        context->device.swapchain_support.present_modes = 0;
+        context->device.swapchain_support.present_mode_count = 0;
     }
-    DZeroMemory(&context->device.swapchainSupport.capabilities, sizeof(context->device.swapchainSupport.capabilities));
-    context->device.graphicsQueueIndex = -1;
-    context->device.presentQueueIndex = -1;
-    context->device.transferQueueIndex = -1;
+    DZeroMemory(&context->device.swapchain_support.capabilities, sizeof(context->device.swapchain_support.capabilities));
+    context->device.graphics_queue_index = -1;
+    context->device.present_queue_index = -1;
+    context->device.transfer_queue_index = -1;
 }
 
 void VulkanDeviceQuerySwapchainSupport(
@@ -173,21 +173,21 @@ void VulkanDeviceQuerySwapchainSupport(
     VkSurfaceKHR surface,
     VulkanSwapchainSupportInfo* outSupportInfo){
         VK_CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &outSupportInfo->capabilities));
-        VK_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &outSupportInfo->formatCount, 0));
-        if(outSupportInfo->formatCount != 0){
+        VK_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &outSupportInfo->format_count, 0));
+        if(outSupportInfo->format_count != 0){
             if(!outSupportInfo->formats){
-                outSupportInfo->formats = (VkSurfaceFormatKHR*)DAllocate(sizeof(VkSurfaceFormatKHR) * outSupportInfo->formatCount, MEMORY_TAG_RENDERER);
+                outSupportInfo->formats = (VkSurfaceFormatKHR*)DAllocate(sizeof(VkSurfaceFormatKHR) * outSupportInfo->format_count, MEMORY_TAG_RENDERER);
             }
-            VK_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &outSupportInfo->formatCount, outSupportInfo->formats));
+            VK_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &outSupportInfo->format_count, outSupportInfo->formats));
 
         }
 
-        VK_CHECK(vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &outSupportInfo->presentModeCount, 0));
-        if(outSupportInfo->presentModeCount != 0){
-            if(!outSupportInfo->presentModes){
-                outSupportInfo->presentModes = (VkPresentModeKHR*)DAllocate(sizeof(VkPresentModeKHR) * outSupportInfo->presentModeCount, MEMORY_TAG_RENDERER);
+        VK_CHECK(vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &outSupportInfo->present_mode_count, 0));
+        if(outSupportInfo->present_mode_count != 0){
+            if(!outSupportInfo->present_modes){
+                outSupportInfo->present_modes = (VkPresentModeKHR*)DAllocate(sizeof(VkPresentModeKHR) * outSupportInfo->present_mode_count, MEMORY_TAG_RENDERER);
             }
-            VK_CHECK(vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &outSupportInfo->presentModeCount, outSupportInfo->presentModes));
+            VK_CHECK(vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &outSupportInfo->present_mode_count, outSupportInfo->present_modes));
         }
 }
 
@@ -200,12 +200,12 @@ b8 VulkanDeviceDetectDepthFormat(VulkanDevice* device){
     u32 flags = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT; //using depth and stencil buffers
     for(u32 i = 0; i < candidateCount; i++){
         VkFormatProperties properties = {};
-        vkGetPhysicalDeviceFormatProperties(device->physicalDevice, candidates[i], &properties);
+        vkGetPhysicalDeviceFormatProperties(device->physical_device, candidates[i], &properties);
         if((properties.linearTilingFeatures & flags) == flags){
-            device->depthFormat = candidates[i];
+            device->depth_format = candidates[i];
             return true;
         } else if((properties.optimalTilingFeatures & flags) == flags){
-            device->depthFormat = candidates[i];
+            device->depth_format = candidates[i];
             return true;
         }
     }
@@ -245,7 +245,7 @@ b8 SelectPhysicalDevice(VulkanContext* context){
         VulkanPhysicalDeviceQueueFamilyInfo queueInfo = {};
         b8 result = PhysicalDeviceMeetsRequirements(physicalDevices[i], context->surface,
                                                     &properties, &features, &requirements, 
-                                                    &queueInfo, &context->device.swapchainSupport);
+                                                    &queueInfo, &context->device.swapchain_support);
 
         if(result){
             DINFO("Selected device: '%s'.", properties.deviceName);
@@ -286,10 +286,10 @@ b8 SelectPhysicalDevice(VulkanContext* context){
                 }
             }
 
-            context->device.physicalDevice = physicalDevices[i];
-            context->device.graphicsQueueIndex = queueInfo.graphicsFamilyIndex;
-            context->device.presentQueueIndex = queueInfo.presentFamilyIndex;
-            context->device.transferQueueIndex = queueInfo.transferFamilyIndex;
+            context->device.physical_device = physicalDevices[i];
+            context->device.graphics_queue_index = queueInfo.graphicsFamilyIndex;
+            context->device.present_queue_index = queueInfo.presentFamilyIndex;
+            context->device.transfer_queue_index = queueInfo.transferFamilyIndex;
             //NOTE: set compute index here
             context->device.properties = properties;
             context->device.features = features;
@@ -297,7 +297,7 @@ b8 SelectPhysicalDevice(VulkanContext* context){
             break;
         }
     }
-    if(!context->device.physicalDevice){
+    if(!context->device.physical_device){
         DERROR("No physical devices were found which meet the requirements.");
         return false;
     }
@@ -384,12 +384,12 @@ b8 PhysicalDeviceMeetsRequirements(VkPhysicalDevice device,
         DTRACE("Compute Family Index: %i", outQueueInfo->computeFamilyIndex); 
 
         VulkanDeviceQuerySwapchainSupport(device, surface, outSwapchainInfo);
-        if(outSwapchainInfo->formatCount < 1 || outSwapchainInfo->presentModeCount < 1){
+        if(outSwapchainInfo->format_count < 1 || outSwapchainInfo->present_mode_count < 1){
             if(outSwapchainInfo->formats){
-                DFree(outSwapchainInfo->formats, sizeof(VkSurfaceKHR) * outSwapchainInfo->formatCount, MEMORY_TAG_RENDERER);
+                DFree(outSwapchainInfo->formats, sizeof(VkSurfaceKHR) * outSwapchainInfo->format_count, MEMORY_TAG_RENDERER);
             }
-            if(outSwapchainInfo->presentModes){
-                DFree(outSwapchainInfo->presentModes, sizeof(VkPresentModeKHR) * outSwapchainInfo->presentModeCount, MEMORY_TAG_RENDERER);
+            if(outSwapchainInfo->present_modes){
+                DFree(outSwapchainInfo->present_modes, sizeof(VkPresentModeKHR) * outSwapchainInfo->present_mode_count, MEMORY_TAG_RENDERER);
             }
             DINFO("Required swapchain support not present, skipping device.");
             return false;

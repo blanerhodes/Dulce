@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-u64 StringLength(char* str){
+u64 StringLength(char* str) {
     return strlen(str);
 }
 
@@ -16,7 +16,7 @@ char* StringDuplicate(char* str){
     return copy;
 }
 
-b8 StringsEqual(char* str0, char* str1){
+b8 StringsEqual(char* str0, char* str1) {
     return strcmp(str0, str1) == 0;
 }
 

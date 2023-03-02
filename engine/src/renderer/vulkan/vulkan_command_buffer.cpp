@@ -18,7 +18,7 @@ void VulkanCommandBufferAllocate(
 
     outCommandBuffer->state = COMMAND_BUFFER_STATE_NOT_ALLOCATED;
     VK_CHECK(vkAllocateCommandBuffers(
-        context->device.logicalDevice,
+        context->device.logical_device,
         &allocateInfo,
         &outCommandBuffer->handle));
     outCommandBuffer->state = COMMAND_BUFFER_STATE_READY;
@@ -29,7 +29,7 @@ void VulkanCommandBufferFree(
     VkCommandPool pool,
     VulkanCommandBuffer* commandBuffer){
 
-    vkFreeCommandBuffers(context->device.logicalDevice, pool, 1, &commandBuffer->handle);
+    vkFreeCommandBuffers(context->device.logical_device, pool, 1, &commandBuffer->handle);
     commandBuffer->handle = 0;
     commandBuffer->state = COMMAND_BUFFER_STATE_NOT_ALLOCATED;
 }

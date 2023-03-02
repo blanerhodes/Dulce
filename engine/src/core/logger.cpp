@@ -1,24 +1,39 @@
 #include "logger.h"
+#include "asserts.h"
+#include "platform/platform.h"
+#include "platform/filesystem.h"
+#include "core/dstring.h"
+#include "core/dmemory.h"
 
-//TODO: temporary
-#include <stdio.h>
-#include <string.h>
 #include <stdarg.h>
 
 struct LoggerSystemState{
-    b8 initialized;
+    FileHandle log_file_handle;
 };
 
-static LoggerSystemState* statePtr;
+static LoggerSystemState* logger_state_ptr;
+
+void AppendToLogFile(char* message) {
+    if (logger_state_ptr && logger_state_ptr->log_file_handle.is_valid) {
+        u64 length = StringLength(message);
+        u64 written = 0;
+        if (!FileSystemWrite(&logger_state_ptr->log_file_handle, length, message, &written)) {
+            PlatformConsoleWriteError("ERROR writing to console.log.", LOG_LEVEL_ERROR);
+        }
+    }
+}
 
 b8 InitializeLogging(u64* memoryRequirement, void* state){
     *memoryRequirement = sizeof(LoggerSystemState);
     if(state == 0){
         return true;
     }
+    logger_state_ptr = (LoggerSystemState*)state;
 
-    statePtr = (LoggerSystemState*)state;
-    statePtr->initialized = true;
+    if (!FileSystemOpen("console.log", FILE_MODE_WRITE, false, &logger_state_ptr->log_file_handle)) {
+        PlatformConsoleWriteError("ERROR: Unable to open console.log for writing.", LOG_LEVEL_ERROR);
+        return false;
+    }
 
     DFATAL("A test message: %f", 3.14f);
     DERROR("A test message: %f", 3.14f);
@@ -27,38 +42,37 @@ b8 InitializeLogging(u64* memoryRequirement, void* state){
     DDEBUG("A test message: %f", 3.14f);
     DTRACE("A test message: %f", 3.14f);
 
-    //TODO: create log file
     return true;
 }
 
-void ShutdownLogging(void* state){
-    statePtr = 0;
+void ShutdownLogging(void* state) {
+    logger_state_ptr = 0;
     //TODO: cleanup logging/write queued entries
 }
 
-void LogOutput(LogLevel level, char* message, ...){
-    const char* levelStrings[6] = {"[FATAL]: ", "[ERROR]: ", "[WARN]: ", "[INFO]: ", "[DEBUG]: ", "[TRACE]: "};
-    b8 isError = level < LOG_LEVEL_WARN;
+void LogOutput(LogLevel level, char* message, ...) {
+    //TODO: all this stuff has to go on another thread since it's so slow
+    const char* level_strings[6] = {"[FATAL]: ", "[ERROR]: ", "[WARN]: ", "[INFO]: ", "[DEBUG]: ", "[TRACE]: "};
+    b8 is_error = level < LOG_LEVEL_WARN;
 
-    //Need to move away from strict char limit at some point
-    i32 msgLength = 32000;
-    char outMessage[msgLength];
-    memset(outMessage, 0, sizeof(outMessage));
+    char out_message[32000];
+    DZeroMemory(out_message, sizeof(out_message));
 
     //this va list type workaround is because MSFT headers override the Clang va_list type with char* sometimes
-    __builtin_va_list argPtr;
-    va_start(argPtr, message);
-    vsnprintf(outMessage, msgLength, message, argPtr);
-    va_end(argPtr);
+    __builtin_va_list arg_ptr;
+    va_start(arg_ptr, message);
+    StringFormatV(out_message, message, arg_ptr);
+    va_end(arg_ptr);
 
-    char outMessage2[msgLength];
-    sprintf(outMessage2, "%s%s\n", levelStrings[level], outMessage);
+    StringFormat(out_message, "%s%s\n", level_strings[level], out_message);
 
-    if(isError){
-        PlatformConsoleWriteError(outMessage2, level);
+    if(is_error){
+        PlatformConsoleWriteError(out_message, level);
     } else{
-        PlatformConsoleWrite(outMessage2, level);
+        PlatformConsoleWrite(out_message, level);
     }
+
+    AppendToLogFile(out_message);
 }
 
 void ReportAssertionFailure(char* expression, char* message, char* file, i32 line){

@@ -4,29 +4,29 @@
 
 void VulkanFenceCreate(VulkanContext* context, b8 createSignaled, VulkanFence* outFence){
     //Make sure to signal the fence if required
-    outFence->isSignaled = createSignaled;
+    outFence->is_signaled = createSignaled;
     VkFenceCreateInfo fenceCreateInfo = {VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
-    if(outFence->isSignaled){
+    if(outFence->is_signaled){
         fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
     }
-    VK_CHECK(vkCreateFence(context->device.logicalDevice, &fenceCreateInfo, context->allocator, &outFence->handle));
+    VK_CHECK(vkCreateFence(context->device.logical_device, &fenceCreateInfo, context->allocator, &outFence->handle));
 }
 
 void VulkanFenceDestroy(VulkanContext* context, VulkanFence* fence){
     if(fence->handle){
-        vkDestroyFence(context->device.logicalDevice, fence->handle, context->allocator);
+        vkDestroyFence(context->device.logical_device, fence->handle, context->allocator);
         fence->handle = 0;
     }
-    fence->isSignaled = false;
+    fence->is_signaled = false;
 }
 
 b8 VulkanFenceWait(VulkanContext* context, VulkanFence* fence, u64 timeoutNs){
-    if(!fence->isSignaled){
-        VkResult result = vkWaitForFences(context->device.logicalDevice, 1, &fence->handle, true, timeoutNs);
+    if(!fence->is_signaled){
+        VkResult result = vkWaitForFences(context->device.logical_device, 1, &fence->handle, true, timeoutNs);
 
         switch(result){
             case VK_SUCCESS:
-                fence->isSignaled = true;
+                fence->is_signaled = true;
                 return true;
             case VK_TIMEOUT:
                 DWARN("vkFenceWait - Timed out");
@@ -51,8 +51,8 @@ b8 VulkanFenceWait(VulkanContext* context, VulkanFence* fence, u64 timeoutNs){
 }
 
 void VulkanFenceReset(VulkanContext* context, VulkanFence* fence){
-    if(fence->isSignaled){
-        VK_CHECK(vkResetFences(context->device.logicalDevice, 1, &fence->handle));
-        fence->isSignaled = false;
+    if(fence->is_signaled){
+        VK_CHECK(vkResetFences(context->device.logical_device, 1, &fence->handle));
+        fence->is_signaled = false;
     }
 }

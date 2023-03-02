@@ -27,8 +27,8 @@ struct EventContext{
 
 typedef b8 (*PfnOnEvent)(u16 code, void* sender, void* listenerInst, EventContext data);
 
-b8 EventInitialize();
-void EventShutdown();
+void EventSystemInitialize(u64* memoryRequirement, void* state);
+void EventSystemShutdown(void* state);
 
 /*
 Register to listen for when events are sent twitht he provided code. Events with duplicate listener/callback combos

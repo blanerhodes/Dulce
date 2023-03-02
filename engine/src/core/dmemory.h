@@ -24,8 +24,8 @@ enum MemoryTag{
     MEMORY_TAG_MAX_TAGS
 };
 
-DAPI void InitializeMemory(u64* memorySysRequirements, void* state);
-DAPI void ShutdownMemory(void* state);
+DAPI void MemorySystemInitialize(u64* memorySysRequirements, void* state);
+DAPI void MemorySystemShutdown(void* state);
 
 DAPI void* DAllocate(u64 size, MemoryTag tag);
 DAPI void DFree(void* block, u64, MemoryTag tag);

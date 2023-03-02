@@ -143,9 +143,9 @@ enum Keys {
     KEYS_MAX_KEYS
 };
 
-void InputInitialize();
-void InputShutdown();
-void InputUpdate(f64 deltaTime);
+void InputSystemInitialize(u64* memoryRequirement, void* state);
+void InputSystemShutdown(void* state);
+void InputUpdate(f64 delta_time);
 
 // keyboard input
 DAPI b8 InputIsKeyDown(Keys key);

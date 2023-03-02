@@ -35,11 +35,11 @@ void VulkanImageCreate(
     imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;         //TODO: configrable sample count
     imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE; //TODO: configurable sharing mode
 
-    VK_CHECK(vkCreateImage(context->device.logicalDevice, &imageCreateInfo, context->allocator, &outImage->handle));
+    VK_CHECK(vkCreateImage(context->device.logical_device, &imageCreateInfo, context->allocator, &outImage->handle));
 
     //get memory requirements
     VkMemoryRequirements memoryRequirements = {};
-    vkGetImageMemoryRequirements(context->device.logicalDevice, outImage->handle, &memoryRequirements);
+    vkGetImageMemoryRequirements(context->device.logical_device, outImage->handle, &memoryRequirements);
 
     i32 memoryType = context->FindMemoryIndex(memoryRequirements.memoryTypeBits, memoryFlags);
     if(memoryType == -1){
@@ -50,10 +50,10 @@ void VulkanImageCreate(
     VkMemoryAllocateInfo memoryAllocateInfo = {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
     memoryAllocateInfo.allocationSize = memoryRequirements.size;
     memoryAllocateInfo.memoryTypeIndex = memoryType;
-    VK_CHECK(vkAllocateMemory(context->device.logicalDevice, &memoryAllocateInfo, context->allocator, &outImage->memory));
+    VK_CHECK(vkAllocateMemory(context->device.logical_device, &memoryAllocateInfo, context->allocator, &outImage->memory));
 
     //Bind memory
-    VK_CHECK(vkBindImageMemory(context->device.logicalDevice, outImage->handle, outImage->memory, 0)); //TODO: configurable memory offset
+    VK_CHECK(vkBindImageMemory(context->device.logical_device, outImage->handle, outImage->memory, 0)); //TODO: configurable memory offset
 
     if(createView){
         outImage->view = 0;
@@ -79,20 +79,20 @@ void VulkanImageViewCreate(
     viewCreateInfo.subresourceRange.baseArrayLayer = 0;
     viewCreateInfo.subresourceRange.layerCount = 1;
 
-    VK_CHECK(vkCreateImageView(context->device.logicalDevice, &viewCreateInfo, context->allocator, &image->view));
+    VK_CHECK(vkCreateImageView(context->device.logical_device, &viewCreateInfo, context->allocator, &image->view));
 }
 
 void VulkanImageDestroy(VulkanContext* context, VulkanImage* image){
     if(image->view){
-        vkDestroyImageView(context->device.logicalDevice, image->view, context->allocator);
+        vkDestroyImageView(context->device.logical_device, image->view, context->allocator);
         image->view = 0;
     }
     if(image->memory){
-        vkFreeMemory(context->device.logicalDevice, image->memory, context->allocator);
+        vkFreeMemory(context->device.logical_device, image->memory, context->allocator);
         image->memory = 0;
     }
     if(image->handle){
-        vkDestroyImage(context->device.logicalDevice, image->handle, context->allocator);
+        vkDestroyImage(context->device.logical_device, image->handle, context->allocator);
         image->handle = 0;
     }
 }

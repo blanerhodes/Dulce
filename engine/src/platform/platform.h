@@ -2,15 +2,11 @@
 
 #include "defines.h"
 
-struct PlatformState{
-    void* internalState;
-};
+b8 PlatformSystemStartup(u64* memoryRequirement, void* state, char* appName, i32 x, i32 y, i32 width, i32 height);
 
-b8 PlatformStartup(PlatformState* platState, char* appName, i32 x, i32 y, i32 width, i32 height);
+void PlatformSystemShutdown(void* state);
 
-void PlatformShutdown(PlatformState* platState);
-
-b8 PlatformPumpMessages(PlatformState* platState);
+b8 PlatformPumpMessages();
 
 void* PlatformAllocate(u64 size, b8 aligned);
 void PlatformFree(void* block, b8 aligned);

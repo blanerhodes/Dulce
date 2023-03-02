@@ -987,7 +987,7 @@ DINLINE Quat QuatsLerp(Quat q0, Quat q1, f32 percentage) {
  * @param degrees The degrees to be converted.
  * @return The amount in radians.
  */
-DINLINE f32 degToRad(f32 degrees) {
+DINLINE f32 DegToRad(f32 degrees) {
     return degrees * DEG2RAD;
 }
 
@@ -997,6 +997,6 @@ DINLINE f32 degToRad(f32 degrees) {
  * @param radians The radians to be converted.
  * @return The amount in degrees.
  */
-DINLINE f32 radToDeg(f32 radians) {
+DINLINE f32 RadToDeg(f32 radians) {
     return radians * RAD2DEG;
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "defines.h"
+#include "math/math_types.h"
 
 enum RendererBackendType{
     RENDERER_BACKEND_TYPE_VULKAN,
@@ -8,21 +9,33 @@ enum RendererBackendType{
     RENDERER_BACKEND_TYPE_DIRECTX
 };
 
-struct RendererBackend{
-    struct PlatformState* platState;
+struct GlobalUniformObject {
+    Mat4 projection;
+    Mat4 view;
+    //padding out to 256
+    Mat4 reserved0;
+    Mat4 reserved1;
+};
 
-    b8 (*Initialize)(struct RendererBackend* backend, char* applicationName, struct PlatformState* platState);
+struct RendererBackend{
+    u32 frame_number;
+
+    b8 (*Initialize)(struct RendererBackend* backend, char* applicationName);
 
     void (*Shutdown)(struct RendererBackend* backend);
 
     void (*Resized)(struct RendererBackend* backend, u16 width, u16 height);
 
-    b8 (*BeginFrame)(struct RendererBackend* backend, f32 deltaTime);
-    b8 (*EndFrame)(struct RendererBackend* backend, f32 deltaTime);
+    b8 (*BeginFrame)(struct RendererBackend* backend, f32 delta_time);
 
-    u32 frameNumber;
+    void (*UpdateGlobalState)(Mat4 projection, Mat4 view, Vec3 view_position, Vec4 ambient_color, i32 mode);
+
+    b8 (*EndFrame)(struct RendererBackend* backend, f32 delta_time);
+
+    void (*UpdateObject)(Mat4 model);
+
 };
 
 struct RenderPacket{
-    f32 deltaTime;
+    f32 delta_time;
 };

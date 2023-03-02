@@ -13,18 +13,29 @@ struct ApplicationState{
     Game* gameInst;
     b8 isRunning;
     b8 isSuspended;
-    PlatformState platform;
     i16 width;
     i16 height;
     Clock clock;
     f64 lastTime;
     LinearAllocator systemsAllocator;
 
+    u64 eventSystemMemoryRequirement;
+    void* eventSystemState;
+
     u64 memorySystemMemoryRequirement;
     void* memorySystemState;
 
     u64 loggingSystemMemoryRequirement;
     void* loggingSystemState;
+
+    u64 inputSystemMemoryRequirement;
+    void* inputSystemState;
+
+    u64 platformSystemMemoryRequirement;
+    void* platformSystemState;
+
+    u64 rendererSystemMemoryRequirement;
+    void* rendererSystemState;
 };
 
 static ApplicationState* appState;
@@ -49,9 +60,13 @@ b8 ApplicationCreate(Game* gameInst){
     u64 systemsAllocatorTotalSize = MegaBytes(64);
     AllocatorCreate(systemsAllocatorTotalSize, 0, &appState->systemsAllocator);
 
-    InitializeMemory(&appState->memorySystemMemoryRequirement, 0);
+    EventSystemInitialize(&appState->eventSystemMemoryRequirement, 0);
+    appState->eventSystemState = AllocatorAllocate(&appState->systemsAllocator, appState->eventSystemMemoryRequirement);
+    EventSystemInitialize(&appState->eventSystemMemoryRequirement, appState->eventSystemState);
+
+    MemorySystemInitialize(&appState->memorySystemMemoryRequirement, 0);
     appState->memorySystemState = AllocatorAllocate(&appState->systemsAllocator, appState->memorySystemMemoryRequirement);
-    InitializeMemory(&appState->memorySystemMemoryRequirement, appState->memorySystemState);
+    MemorySystemInitialize(&appState->memorySystemMemoryRequirement, appState->memorySystemState);
 
     //init subsystems
     InitializeLogging(&appState->loggingSystemMemoryRequirement, 0);
@@ -61,28 +76,31 @@ b8 ApplicationCreate(Game* gameInst){
         return false;
     }
 
-    InputInitialize();
-
-    if(!EventInitialize()){
-        DERROR("Event system not initialized!");
-        return false;
-    }
+    InputSystemInitialize(&appState->inputSystemMemoryRequirement, 0);
+    appState->inputSystemState = AllocatorAllocate(&appState->systemsAllocator, appState->inputSystemMemoryRequirement);
+    InputSystemInitialize(&appState->inputSystemMemoryRequirement, appState->inputSystemState);
 
     EventRegister(EVENT_CODE_APPLICATION_QUIT, 0, ApplicationOnEvent);
     EventRegister(EVENT_CODE_KEY_PRESSED, 0, ApplicationOnKey);
     EventRegister(EVENT_CODE_KEY_RELEASED, 0, ApplicationOnKey);
     EventRegister(EVENT_CODE_RESIZED, 0, ApplicationOnResized);
 
-    if(!PlatformStartup(&appState->platform, gameInst->appConfig.name, 
-                        gameInst->appConfig.startPosX, gameInst->appConfig.startPosY, 
-                        gameInst->appConfig.startWidth, gameInst->appConfig.startHeight)){
-        return false;
-    }
+    PlatformSystemStartup(&appState->platformSystemMemoryRequirement, 0, 0, 0, 0, 0, 0);
+    appState->platformSystemState = AllocatorAllocate(&appState->systemsAllocator, appState->platformSystemMemoryRequirement);
+    PlatformSystemStartup(
+        &appState->platformSystemMemoryRequirement,
+        appState->platformSystemState, 
+        gameInst->appConfig.name, 
+        gameInst->appConfig.startPosX, gameInst->appConfig.startPosY, 
+        gameInst->appConfig.startWidth, gameInst->appConfig.startHeight);
 
-    if(!RendererIntialize(gameInst->appConfig.name, &appState->platform)){
-        DFATAL("Failed to initialize renderer. Aborting application.");
+    RendererSystemInitialize(&appState->rendererSystemMemoryRequirement, 0, 0);
+    appState->rendererSystemState = AllocatorAllocate(&appState->systemsAllocator, appState->rendererSystemMemoryRequirement);
+    if(!RendererSystemInitialize(&appState->rendererSystemMemoryRequirement, appState->rendererSystemState, gameInst->appConfig.name)){
+        DFATAL("Failed to initialize renderer. aborting application");
         return false;
     }
+    
 
     if(!appState->gameInst->Initialize(appState->gameInst)){
         DFATAL("Game failed to initialize");
@@ -105,7 +123,7 @@ b8 ApplicationRun(){
 
     DINFO(GetMemoryUsageStr());
     while(appState->isRunning){
-        if(!PlatformPumpMessages(&appState->platform)){
+        if(!PlatformPumpMessages()){
             appState->isRunning = false;
         }
 
@@ -127,7 +145,7 @@ b8 ApplicationRun(){
             }
 
             RenderPacket packet;
-            packet.deltaTime = delta;
+            packet.delta_time = delta;
             RendererDrawFrame(&packet);
 
             f64 frameEndTime = PlatformGetAbsoluteTime();
@@ -157,11 +175,11 @@ b8 ApplicationRun(){
     EventUnregister(EVENT_CODE_KEY_PRESSED, 0, ApplicationOnKey);
     EventUnregister(EVENT_CODE_KEY_RELEASED, 0, ApplicationOnKey);
     EventUnregister(EVENT_CODE_RESIZED, 0, ApplicationOnResized);
-    EventShutdown();
-    InputShutdown();
-    RendererShutdown();
-    PlatformShutdown(&appState->platform);
-    ShutdownMemory(&appState->memorySystemState);
+    EventSystemShutdown(&appState->eventSystemState);
+    InputSystemShutdown(&appState->inputSystemState);
+    RendererSystemShutdown(&appState->rendererSystemState);
+    PlatformSystemShutdown(&appState->platformSystemState);
+    MemorySystemShutdown(&appState->memorySystemState);
     return true;
 }
 

@@ -1,14 +1,13 @@
+
 REM Build script for engine
-REM @echo off
+@echo off
 SetLocal EnableDelayedExpansion
 
 REM Get a list of all .cpp files
-SET cFilenames=
-SET fileDirectory=%cd%\src
-echo %fileDirectory%
-FOR /R "%fileDirectory%" %%f in (*.cpp) do (
-    SET cFilenames=!cFilenames! %%f
-)
+SET cFilenames=../engine/unity_build/unity_build.cpp
+REM FOR /R %%f in (*.cpp) do (
+REM     SET cFilenames=!cFilenames! %%f
+REM )
 
 REM echo "Files:" %cFilenames%
 SET assembly=engine
