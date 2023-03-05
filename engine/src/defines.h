@@ -25,6 +25,8 @@ typedef uint8_t b8;
 #define true 1
 #define false 0
 
+#define INVALID_ID 4294967295U
+
 #define ArrayCount(array) (sizeof(array) / sizeof((array)[0]))
 #define Minimum(A, B) ((A < B) ? (A) : (B))
 #define Maximum(A, B) ((A > B) ? (A) : (B))

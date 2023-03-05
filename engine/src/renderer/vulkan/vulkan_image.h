@@ -21,4 +21,20 @@ void VulkanImageViewCreate(
     VulkanImage* image,
     VkImageAspectFlags aspectFlags);
 
+//transition from old_layout to new_layout
+void VulkanImageTransitionLayout(
+    VulkanContext* context,
+    VulkanCommandBuffer* command_buffer,
+    VulkanImage* image,
+    VkFormat format,
+    VkImageLayout old_layout,
+    VkImageLayout new_layout);
+
+//copies data in buffer ot provided image
+void VulkanImageCopyFromBuffer(
+    VulkanContext* context,
+    VulkanImage* image,
+    VkBuffer buffer,
+    VulkanCommandBuffer* command_buffer);
+
 void VulkanImageDestroy(VulkanContext* context, VulkanImage* image);

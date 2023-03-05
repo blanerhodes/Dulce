@@ -9,6 +9,10 @@ void VulkanObjectShaderDestroy(VulkanContext* context, VulkanObjectShader* shade
 
 void VulkanObjectShaderUse(VulkanContext* context, VulkanObjectShader* shader);
 
-void VulkanObjectShaderUpdateGlobalState(VulkanContext* context, VulkanObjectShader* shader);
+void VulkanObjectShaderUpdateGlobalState(VulkanContext* context, VulkanObjectShader* shader, f32 delta_time);
 
-void VulkanObjectShaderUpdateObject(VulkanContext* context, VulkanObjectShader* shader, Mat4 model);
+void VulkanObjectShaderUpdateObject(VulkanContext* context, VulkanObjectShader* shader, GeometryRenderData data);
+
+b8 VulkanObjectShaderAcquireResources(VulkanContext* context, VulkanObjectShader* shader, u32* out_object_id);
+
+void VulkanObjectShaderReleaseResources(VulkanContext* context, VulkanObjectShader* shader, u32 object_id);

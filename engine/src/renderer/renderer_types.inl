@@ -2,6 +2,7 @@
 
 #include "defines.h"
 #include "math/math_types.h"
+#include "resources/resource_types.h"
 
 enum RendererBackendType{
     RENDERER_BACKEND_TYPE_VULKAN,
@@ -15,6 +16,20 @@ struct GlobalUniformObject {
     //padding out to 256
     Mat4 reserved0;
     Mat4 reserved1;
+};
+
+struct ObjectUniformObject {
+    Vec4 diffuse_color;
+    //pad out to 64
+    Vec4 reserved0;
+    Vec4 reserved1;
+    Vec4 reserved2;
+};
+
+struct GeometryRenderData {
+    u32 object_id;
+    Mat4 model;
+    Texture* textures[16];
 };
 
 struct RendererBackend{
@@ -32,8 +47,12 @@ struct RendererBackend{
 
     b8 (*EndFrame)(struct RendererBackend* backend, f32 delta_time);
 
-    void (*UpdateObject)(Mat4 model);
+    void (*UpdateObject)(GeometryRenderData data);
 
+    void (*CreateTexture)(char* name, b8 auto_release, i32 width, i32 height, i32 channel_count,
+                          u8* pixels, b8 has_transparency, Texture* out_texture);
+    
+    void (*DestroyTexture)(Texture* texture);
 };
 
 struct RenderPacket{

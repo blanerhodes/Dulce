@@ -81,4 +81,5 @@ union Mat4 {
 
 struct Vertex3d {
     Vec3 position;
+    Vec2 texcoord;
 };

@@ -2,7 +2,7 @@
 #include "vulkan/vulkan_backend.h"
 
 b8 RendererBackendCreate(RendererBackendType type, RendererBackend* out_renderer_backend){
-    if(type == RENDERER_BACKEND_TYPE_VULKAN){
+    if (type == RENDERER_BACKEND_TYPE_VULKAN) {
         out_renderer_backend->Initialize = VulkanRendererBackendInitialize;
         out_renderer_backend->Shutdown = VulkanRendererBackendShutdown;
         out_renderer_backend->BeginFrame = VulkanRendererBackendBeginFrame;
@@ -10,6 +10,8 @@ b8 RendererBackendCreate(RendererBackendType type, RendererBackend* out_renderer
         out_renderer_backend->EndFrame = VulkanRendererBackendEndFrame;
         out_renderer_backend->Resized = VulkanRendererBackendOnResized;
         out_renderer_backend->UpdateObject = VulkanRendererBackendUpdateObject;
+        out_renderer_backend->CreateTexture = VulkanRendererCreateTexture;
+        out_renderer_backend->DestroyTexture = VulkanRendererDestroyTexture;
         return true;
     }
     return false;
@@ -23,4 +25,6 @@ void RendererBackendDestroy(RendererBackend* renderer_backend){
     renderer_backend->EndFrame = 0;
     renderer_backend->Resized = 0;
     renderer_backend->UpdateObject = 0;
+    renderer_backend->CreateTexture = 0;
+    renderer_backend->DestroyTexture = 0;
 }

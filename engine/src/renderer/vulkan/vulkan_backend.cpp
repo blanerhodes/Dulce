@@ -9,6 +9,7 @@
 #include "vulkan_fence.h"
 #include "vulkan_utils.h"
 #include "vulkan_buffer.h"
+#include "vulkan_image.h"
 
 #include "core/logger.h"
 #include "core/dstring.h"
@@ -227,12 +228,23 @@ b8 VulkanRendererBackendInitialize(RendererBackend* backend, char* applicationNa
 
     verts[0].position.x = -0.5 * f;
     verts[0].position.y = -0.5 * f;
+    verts[0].texcoord.x = 0.0;
+    verts[0].texcoord.y = 0.0;
+
     verts[1].position.x = 0.5 * f;
     verts[1].position.y = 0.5 * f;
+    verts[1].texcoord.x = 1.0;
+    verts[1].texcoord.y = 1.0;
+
     verts[2].position.x = -0.5 * f;
     verts[2].position.y = 0.5 * f;
+    verts[2].texcoord.x = 0.0;
+    verts[2].texcoord.y = 1.0;
+
     verts[3].position.x = 0.5 * f;
     verts[3].position.y = -0.5 * f;
+    verts[3].texcoord.x = 1.0;
+    verts[3].texcoord.y = 0.0;
 
     const u32 index_count = 6;
     u32 indices[index_count] = {0, 1, 2, 0, 3, 1};
@@ -241,6 +253,11 @@ b8 VulkanRendererBackendInitialize(RendererBackend* backend, char* applicationNa
                     &context.object_vertex_buffer, 0, sizeof(verts), verts);
     UploadDataRange(&context, context.device.graphics_command_pool, 0, context.device.graphics_queue,
                     &context.object_index_buffer, 0, sizeof(indices), indices);
+    u32 object_id = 0;
+    if (!VulkanObjectShaderAcquireResources(&context, &context.object_shader, &object_id)) {
+        DERROR("Failed to acquire shader resrouces");
+        return false;
+    }
     //end temp code
     
     DINFO("Vulkan renderer initialized successfully.");
@@ -332,7 +349,8 @@ void VulkanRendererBackendOnResized(RendererBackend* backend, u16 width, u16 hei
     DINFO("Vulkan renderer backend->resized: w/h/gen: %i/%i/%llu", width, height, context.frame_buffer_size_generation);
 }
 
-b8 VulkanRendererBackendBeginFrame(RendererBackend* backend, f32 delta_time){
+b8 VulkanRendererBackendBeginFrame(RendererBackend* backend, f32 delta_time) {
+    context.frame_delta_time = delta_time;
     VulkanDevice* device = &context.device;
 
     //Check if recrating swap chain and boot out
@@ -416,7 +434,7 @@ void VulkanRendererBackendUpdateGlobalState(Mat4 projection, Mat4 view, Vec3 vie
     context.object_shader.global_ubo.view = view;
     //TODO: other ubo props
 
-    VulkanObjectShaderUpdateGlobalState(&context, &context.object_shader);
+    VulkanObjectShaderUpdateGlobalState(&context, &context.object_shader, context.frame_delta_time);
 
 }
 
@@ -480,8 +498,8 @@ b8 VulkanRendererBackendEndFrame(RendererBackend* backend, f32 delta_time){
     return true;
 }
 
-void VulkanRendererBackendUpdateObject(Mat4 model) {
-    VulkanObjectShaderUpdateObject(&context, &context.object_shader, model);
+void VulkanRendererBackendUpdateObject(GeometryRenderData data) {
+    VulkanObjectShaderUpdateObject(&context, &context.object_shader, data);
 
     VulkanCommandBuffer* command_buffer = &context.graphics_command_buffers[context.image_index];
     //TODO: temp test code
@@ -661,4 +679,91 @@ b8 CreateBuffers(VulkanContext* context) {
     context->geometry_index_offset = 0;
 
     return true;
+}
+
+void VulkanRendererCreateTexture(char* name, b8 auto_release, i32 width, i32 height, i32 channel_count,
+                                 u8* pixels, b8 has_transparency, Texture* out_texture) {
+    out_texture->width = width;
+    out_texture->height = height;
+    out_texture->channel_count = channel_count;
+    out_texture->generation = INVALID_ID;
+
+    //internal data creation
+    //TODO: use an allocator for this
+    out_texture->internal_data = (VulkanTextureData*)DAllocate(sizeof(VulkanTextureData), MEMORY_TAG_TEXTURE);
+    VulkanTextureData* data = (VulkanTextureData*)out_texture->internal_data;
+    VkDeviceSize image_size = width * height * channel_count;
+
+    //NOTE: assumes 8 bits per channel
+    VkFormat image_format = VK_FORMAT_R8G8B8A8_UNORM;
+
+    //Create a staging buffer and load data into it
+    VkBufferUsageFlags usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    VkMemoryPropertyFlags memory_prop_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    VulkanBuffer staging = {};
+    VulkanBufferCreate(&context, image_size, usage, memory_prop_flags, true, &staging);
+
+    VulkanBufferLoadData(&context, &staging, 0, image_size, 0, pixels);
+
+    VulkanImageCreate(&context, VK_IMAGE_TYPE_2D, width, height, image_format, VK_IMAGE_TILING_OPTIMAL,
+                      VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, true, VK_IMAGE_ASPECT_COLOR_BIT, &data->image);
+
+    VulkanCommandBuffer temp_cmd_buffer = {};
+    VkCommandPool pool = context.device.graphics_command_pool;
+    VkQueue queue = context.device.graphics_queue;
+    VulkanCommandBufferAllocateAndBeginSingleUse(&context, pool, &temp_cmd_buffer);
+    
+    //transition from whatever the layout is currently to optimal for receiving data
+    VulkanImageTransitionLayout(&context, &temp_cmd_buffer, &data->image, image_format, 
+                                VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    //copy the data from the buffer
+    VulkanImageCopyFromBuffer(&context, &data->image, staging.handle, &temp_cmd_buffer);
+    //transition from optimal for data receiving to shader-read-only so it's readable by the shader
+    VulkanImageTransitionLayout(&context, &temp_cmd_buffer, &data->image, image_format, 
+                                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+            
+    VulkanCommandBufferEndSingleUse(&context, pool, &temp_cmd_buffer, queue);
+    VulkanBufferDestroy(&context, &staging);
+
+
+    VkSamplerCreateInfo sampler_info = {VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
+    //TODO: filters should be configurable
+    sampler_info.magFilter = VK_FILTER_LINEAR;
+    sampler_info.minFilter = VK_FILTER_LINEAR;
+    sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    sampler_info.anisotropyEnable = VK_TRUE;
+    sampler_info.maxAnisotropy = 16;
+    sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    sampler_info.unnormalizedCoordinates = VK_FALSE;
+    sampler_info.compareEnable = VK_FALSE;
+    sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
+    sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    sampler_info.mipLodBias = 0.0f;
+    sampler_info.minLod = 0.0f;
+    sampler_info.maxLod = 0.0f;
+
+    VkResult result = vkCreateSampler(context.device.logical_device, &sampler_info, context.allocator, &data->sampler);
+    if (!VulkanResultIsSuccess(result)) {
+        DERROR("Error creating texture sampler: %s", VulkanResultString(result, true));
+        return;
+    }
+
+    out_texture->has_transparency = has_transparency;
+    out_texture->generation++;
+}
+
+void VulkanRendererDestroyTexture(Texture* texture) {
+    vkDeviceWaitIdle(context.device.logical_device);
+    VulkanTextureData* data = (VulkanTextureData*)texture->internal_data;
+
+    VulkanImageDestroy(&context, &data->image);
+    DZeroMemory(&data->image, sizeof(VulkanImage));
+    vkDestroySampler(context.device.logical_device, data->sampler, context.allocator);
+    data->sampler = 0;
+
+    DFree(texture->internal_data, sizeof(VulkanTextureData), MEMORY_TAG_TEXTURE);
+    DZeroMemory(texture, sizeof(Texture));
 }

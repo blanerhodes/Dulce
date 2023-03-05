@@ -123,19 +123,41 @@ struct VulkanPipeline {
 
 //vert and frag
 #define OBJECT_SHADER_STAGE_COUNT 2
+#define VULKAN_OBJECT_SHADER_DESCRIPTOR_COUNT 2
+#define VULKAN_OBJECT_MAX_OBJECT_COUNT 1024
+
+struct VulkanDescriptorState {
+    //One per frame
+    u32 generations[3];
+};
+
+struct VulkanObjectShaderObjectState {
+    //Per frame
+    VkDescriptorSet descriptor_sets[3];
+    // Per descriptor
+    VulkanDescriptorState descriptor_states[VULKAN_OBJECT_SHADER_DESCRIPTOR_COUNT];
+};
+
 struct VulkanObjectShader {
     VulkanShaderStage stages[OBJECT_SHADER_STAGE_COUNT];
+    GlobalUniformObject global_ubo;
+
     VkDescriptorPool global_descriptor_pool;
     VkDescriptorSetLayout global_descriptor_set_layout;
-    //max 3 for triple buffering, each frame gets its own set
-    VkDescriptorSet global_descriptor_sets[3];
-    b8 descriptor_updated[3];
-    GlobalUniformObject global_ubo;
+    VkDescriptorSet global_descriptor_sets[3]; //max 3 for triple buffering, each frame gets its own set
     VulkanBuffer global_uniform_buffer;
+
+    VkDescriptorPool object_descriptor_pool;
+    VkDescriptorSetLayout object_descriptor_set_layout;
+    VulkanBuffer object_uniform_buffer; //Object uniform buffers
+    u32 object_uniform_buffer_index; //TODO: manage a free list of some kind here
+    VulkanObjectShaderObjectState object_states[VULKAN_OBJECT_MAX_OBJECT_COUNT]; //TODO: make dynamic
+
     VulkanPipeline pipeline;
 };
 
 struct VulkanContext {
+    f32 frame_delta_time;
     u32 frame_buffer_width;
     u32 frame_buffer_height;
     //current generation of framebuffer size. If it doesn't matched framebufferSizeLastGeneration
@@ -174,4 +196,9 @@ struct VulkanContext {
     VkDebugUtilsMessengerEXT debug_messenger;
 #endif
     i32 (*FindMemoryIndex)(u32 type_filter, u32 property_flags);
+};
+
+struct VulkanTextureData {
+    VulkanImage image;
+    VkSampler sampler;
 };

@@ -15,4 +15,4 @@ void VulkanRendererBackendUpdateGlobalState(Mat4 projection, Mat4 view, Vec3 vie
 
 b8 VulkanRendererBackendEndFrame(RendererBackend* backend, f32 delta_time);
 
-void VulkanRendererBackendUpdateObject(Mat4 model);
+void VulkanRendererBackendUpdateObject(GeometryRenderData data);
